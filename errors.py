@@ -21,6 +21,8 @@ class MoiraError(MoiraBaseError):
 	"""An error returned from Moira server itself which has a Moira error code."""
 	
 	def __init__(self, code):
+		self.code = code
+		
 		if code in moira_constants.errors:
 			MoiraBaseError.__init__(self, "Moira error: %s" % moira_constants.errors[code])
 		else:

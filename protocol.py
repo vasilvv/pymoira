@@ -19,6 +19,7 @@ MOIRA_CLIENT_IDSTRING = "PyMoira"
 MOIRA_KERBEROS_SERVICE_NAME = "moira"
 
 MOIRA_QUERY_VERSION = 14
+MOIRA_MAX_LIST_DEPTH = 3072	# server/qsupport.pc, line 206
 
 #
 # Utility functions
