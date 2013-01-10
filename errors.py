@@ -30,3 +30,8 @@ class MoiraUnavailableError(MoiraBaseError):
 	"""An error raised in case when Moira MOTD is not empty."""
 	
 	pass
+
+class MoiraUserError(MoiraBaseError):
+	"""An error related to Moira but not returned from the server."""
+	
+	pass
