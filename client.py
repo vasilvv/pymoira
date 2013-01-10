@@ -169,7 +169,7 @@ class MoiraClient(object):
 		"""Sends a query to the Moira server and returns the result."""
 		
 		if version:
-			this.setVersion(version)
+			self.setVersion(version)
 		
 		result = []
 		
