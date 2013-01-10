@@ -165,8 +165,11 @@ class MoiraClient(object):
 		if result.opcode != MR_SUCCESS:
 			raise MoiraError(result.opcode)
 	
-	def rawQuery(self, name, params):
+	def query(self, name, params, version = None):
 		"""Sends a query to the Moira server and returns the result."""
+		
+		if version:
+			this.setVersion(version)
 		
 		result = []
 		
