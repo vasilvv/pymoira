@@ -50,6 +50,27 @@ class MoiraListMember(object):
 	
 	def __eq__(self, other):
 		return self.mtype == other.mtype and self.name == other.name
+	
+	def getMemberships(self, recursive = False):
+		"""Returns the list of lists on which this member is on. If recursive is set to true,
+		this means that all lists will be returned, otherwise only lists on which member is explicitly
+		on will be returned."""
+		
+		mtype = ('R' if recursive else '') + self.mtype
+		
+		response = self.client.query( 'get_lists_of_member', (mtype, self.name), version = 14 )
+		result = []
+		for entry in response:
+			name, active, public, hidden, is_mailing, is_afsgroup = entry
+			list_obj = MoiraList(self.client, name)
+			list_obj.active = active
+			list_obj.hidden = hidden
+			list_obj.is_mailing = is_mailing
+			list_obj.is_afsgroup = is_afsgroup
+			result.append(list_obj)
+		
+		return frozenset(result)
+		
 
 class MoiraList(MoiraListMember):
 	def __init__(self, client, listname):
