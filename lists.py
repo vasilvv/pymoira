@@ -94,7 +94,8 @@ class MoiraList(MoiraListMember):
 		and on the side of the server. In the latter case, the server does not communicate the list of the nested
 		lists to which user does not have access, so only the resulting list of members is returned. In case of the client-side
 		expansion however, it causes the method to return the (members, inaccessible_lists, lists) tuple instead of just the member list.
-		The inaccessible_lists is a set of lists to which the access was denied, and ."""
+		The inaccessible_lists is a set of lists to which the access was denied, and the lists is the dictionary with the memers of all
+		lists encountered during the expansion process."""
 		
 		if server_side:
 			members = self.getExplicitMembers(query_name = "get_end_members_of_list")
@@ -111,6 +112,7 @@ class MoiraList(MoiraListMember):
 			# We need seperate handling for the first list, because if access to it is denied,
 			# we are supposed to return the error message
 			members = self.getExplicitMembers()
+			known[self.name] = members
 			
 			to_expand = True
 			current_depth = 0
@@ -148,3 +150,58 @@ class MoiraList(MoiraListMember):
 		 self.is_nfsserver, self.is_mailman_list, self.mailman_server, self.owner_type, self.owner_name,
 		 self.memacl_type, self.memacl_name, self.description, self.lastmod_type, self.lastmod_by,
 		 self.lastmod_with) = response
+
+class MoiraListTracer(object):
+	"""A class which for a given list allows to determine why the certain member is on that list.
+	When you initialize it, it does the recursive expansion of the list on the client side,
+	and then you may ask the class for the inclusion paths for different members."""
+	
+	def __init__(self, mlist, max_pathways = 65536):
+		self.mlist = mlist
+		self.members, self.inaccessible, self.lists = mlist.getAllMembers(include_lists = True)
+		self.max_pathways = max_pathways
+		self.createInverseMap()
+	
+	def createInverseMap(self):
+		"""Creates the [member -> lists on which it is explicitly on] dictionary."""
+		
+		result = {}
+		for listname, members in self.lists.iteritems():
+			if not members:
+				continue
+
+			for member in members:
+				if member not in result:
+					result[member] = []
+				result[member].append(listname)
+		
+		self.inverse = result
+		self.inverseLists = { member.name : contents for member, contents in self.inverse.iteritems() if type(member) == MoiraList }
+	
+	def trace(self, member):
+		"""Returns the pathways by which user is included into a list. The pathways
+		are tuples in which the first element is the root list and the last one is
+		the list into which the member is actually included."""
+		
+		if member not in self.inverse:
+			return []
+		
+		pathways = []
+		for mlist in self.inverse[member]:
+			self.recursiveTrace(member, mlist, tuple(), pathways)
+		return pathways
+		
+	def recursiveTrace(self, member, curlist, curway, output):
+		newway = curway + (curlist,)
+		if curlist == self.mlist.name:
+			if len(output) == self.max_pathways:
+				raise MoiraUserError("Maximum number (%s) of possible inclusion pathways reached" % self.max_pathways)
+			output.append( newway[::-1] )
+			return
+		
+		for listname in self.inverseLists[curlist]:
+			# Protect ourselves from recursions
+			if listname in newway:
+				continue
+			
+			self.recursiveTrace(member, listname, newway, output)
