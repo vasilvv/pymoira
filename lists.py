@@ -167,6 +167,11 @@ class MoiraList(MoiraListMember):
 		 self.memacl_type, self.memacl_name, self.description, self.lastmod_type, self.lastmod_by,
 		 self.lastmod_with) = response
 	
+	def countMembers(self):
+		"""Returns the amount of explicit members of the list."""
+		
+		return int( self.client.query( 'count_members_of_list', (self.name, ), version = 14 )[0][0] )
+	
 	def addMember(self, member, tag = None):
 		"""Adds a member into the list."""
 		
