@@ -28,22 +28,31 @@ class MoiraListMember(object):
 	
 	@staticmethod
 	def fromTuple(client, member):
-		"""Constructs the relevant Moira list member object out of a type-name tuple"""
+		"""Constructs the relevant Moira list member object out of a type-name[-tag] tuple"""
 		
-		if len(member) != 2:
-			raise MoiraUserError("Moira list member tuple must has a type-name format")
+		if len(member) not in {2, 3}:
+			raise MoiraUserError("Moira list member tuple must has a type-name[-tag] format")
 		
-		mtype, name = member
+		mtype, name = member[0:2]
+		
 		if mtype == MoiraListMember.List:
-			return MoiraList(client, name)
+			result = MoiraList(client, name)
+		else:
+			result = MoiraListMember(client, mtype, name)
 		
-		return MoiraListMember(client, mtype, name)
+		if len(member) > 2:
+			result.tag = member[2]
+		
+		return result
 	
 	def toTuple(self):
-		return (self.mtype, self.name)
+		if hasattr(self, 'tag'):
+			return (self.mtype, self.name, self.tag)
+		else:
+			return (self.mtype, self.name)
 	
 	def __repr__(self):
-		return "%s:%s" % self.toTuple()
+		return "%s:%s" % self.toTuple()[0:2]
 	
 	def __hash__(self):
 		return self.__repr__().__hash__()
@@ -78,7 +87,7 @@ class MoiraList(MoiraListMember):
 		
 		super(MoiraList, self).__init__( client, MoiraListMember.List, listname )
 	
-	def getExplicitMembers(self, query_name = "get_members_of_list"):
+	def getMembersViaQuery(self, query_name):
 		"""Returns all the members of the list which are included into it explicitly,
 		that is, not by other lists."""
 		
@@ -89,7 +98,11 @@ class MoiraList(MoiraListMember):
 		
 		return frozenset(result)
 
-	def getAllMembers(self, server_side = False, include_lists = False):
+	def getExplicitMembers(self, tags = False):
+		query_name = "get_tagged_members_of_list" if tags else "get_members_of_list"
+		return self.getMembersViaQuery(query_name)
+
+	def getAllMembers(self, server_side = False, include_lists = False, tags = False):
 		"""Performs a recursive expansion of the given list. This may be done both on the side of the client
 		and on the side of the server. In the latter case, the server does not communicate the list of the nested
 		lists to which user does not have access, so only the resulting list of members is returned. In case of the client-side
@@ -98,7 +111,10 @@ class MoiraList(MoiraListMember):
 		lists encountered during the expansion process."""
 		
 		if server_side:
-			members = self.getExplicitMembers(query_name = "get_end_members_of_list")
+			if tags:
+				raise MoiraUserError("Server-side expansion does not support member tag retrieval")
+			
+			members = self.getMembersViaQuery("get_end_members_of_list")
 			if include_lists:
 				return members
 			else:
@@ -111,7 +127,7 @@ class MoiraList(MoiraListMember):
 			
 			# We need seperate handling for the first list, because if access to it is denied,
 			# we are supposed to return the error message
-			members = self.getExplicitMembers()
+			members = self.getExplicitMembers(tags = tags)
 			known[self.name] = members
 			
 			to_expand = True
@@ -179,9 +195,9 @@ class MoiraListTracer(object):
 	When you initialize it, it does the recursive expansion of the list on the client side,
 	and then you may ask the class for the inclusion paths for different members."""
 	
-	def __init__(self, mlist, max_pathways = 65536):
+	def __init__(self, mlist, tags = False, max_pathways = 65536):
 		self.mlist = mlist
-		self.members, self.inaccessible, self.lists = mlist.getAllMembers(include_lists = True)
+		self.members, self.inaccessible, self.lists = mlist.getAllMembers(include_lists = True, tags = tags)
 		self.max_pathways = max_pathways
 		self.createInverseMap()
 	
