@@ -7,6 +7,8 @@
 
 import protocol
 import moira_constants
+import utils
+import datetime
 from errors import *
 
 class MoiraListMember(object):
@@ -161,11 +163,30 @@ class MoiraList(MoiraListMember):
 	def loadInfo(self):
 		"""Loads the information about the list from the server into the object."""
 		
+		query_description = (
+			('name', str),
+			('active', bool),
+			('public', bool),
+			('hidden', bool),
+			('is_mailing', bool),
+			('is_afsgroup', bool),
+			('gid', int),
+			('is_nfsserver', bool),
+			('is_mailman_list', bool),
+			('mailman_server', str),
+			('owner_type', str),
+			('owner_name', str),
+			('memacl_type', str),
+			('memacl_name', str),
+			('description', str),
+			('lastmod_datetime', datetime.datetime),
+			('lastmod_by', str),
+			('lastmod_with', str),
+		)
+		
 		response, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
-		(self.name, self.active, self.public, self.hidden, self.is_mailing, self.is_afsgroup, self.gid,
-		 self.is_nfsserver, self.is_mailman_list, self.mailman_server, self.owner_type, self.owner_name,
-		 self.memacl_type, self.memacl_name, self.description, self.lastmod_type, self.lastmod_by,
-		 self.lastmod_with) = response
+		result = utils.responseToDict(query_description, response)
+		self.__dict__.update(result)
 	
 	def countMembers(self):
 		"""Returns the amount of explicit members of the list."""
