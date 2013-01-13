@@ -152,6 +152,7 @@ class MoiraClient(object):
 		result = self.recvPacket()
 		if result.opcode != MR_SUCCESS and result.opcode != MR_VERSION_LOW:
 			raise MoiraError(result.opcode)
+		self.version = version
 	
 	def authenticate(self, client = None):
 		"""Authenticates to the server using Kerberos."""
