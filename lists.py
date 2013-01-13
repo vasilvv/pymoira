@@ -150,6 +150,29 @@ class MoiraList(MoiraListMember):
 		 self.is_nfsserver, self.is_mailman_list, self.mailman_server, self.owner_type, self.owner_name,
 		 self.memacl_type, self.memacl_name, self.description, self.lastmod_type, self.lastmod_by,
 		 self.lastmod_with) = response
+	
+	def addMember(self, member, tag = None):
+		"""Adds a member into the list."""
+		
+		if tag:
+			self.client.query( 'add_tagged_member_to_list', (self.name, member.mtype, member.name, tag), version = 14 )
+		else:
+			self.client.query( 'add_member_to_list', (self.name, member.mtype, member.name), version = 14 )
+	
+	def removeMember(self, member):
+		"""Removes a member from the list."""
+		
+		self.client.query( 'delete_member_from_list', (self.name, member.mtype, member.name), version = 14 )
+	
+	def tagMember(self, member, tag):
+		"""Sets a tag on the member of the list."""
+		
+		self.client.query( 'tag_member_of_list', (self.name, member.mtype, member.name, tag), version = 14 )
+	
+	def untagMember(self, member):
+		"""Removes the tag from the member of the list."""
+		
+		self.tagMember(member, "")
 
 class MoiraListTracer(object):
 	"""A class which for a given list allows to determine why the certain member is on that list.
