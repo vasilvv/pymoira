@@ -177,7 +177,7 @@ class MoiraList(MoiraListMember):
 			('is_mailing', bool),
 			('is_afsgroup', bool),
 			('gid', int),
-			('is_nfsserver', bool),
+			('is_nfsgroup', bool),
 			('is_mailman_list', bool),
 			('mailman_server', str),
 			('owner_type', str),
