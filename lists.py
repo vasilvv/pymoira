@@ -62,6 +62,12 @@ class MoiraListMember(object):
 	def __eq__(self, other):
 		return self.mtype == other.mtype and self.name == other.name
 	
+	def __cmp__(self, other):
+		if self.mtype == other.mtype:
+			return cmp(self.name, other.name)
+		else:
+			return cmp(self.mtype, other.mtype)
+	
 	def getMemberships(self, recursive = False):
 		"""Returns the list of lists on which this member is on. If recursive is set to true,
 		this means that all lists will be returned, otherwise only lists on which member is explicitly
