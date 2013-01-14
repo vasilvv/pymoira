@@ -15,7 +15,10 @@ def convertMoiraBool(val):
 	raise MoiraUserError("Invalid boolean value received from Moira server")
 
 def convertMoiraInt(val):
-	return int(val)
+	try:
+		return int(val)
+	except ValueError:
+		return None
 
 def convertMoiraDateTime(val):
 	return datetime.datetime.strptime(val, '%d-%b-%Y %H:%M:%S')
