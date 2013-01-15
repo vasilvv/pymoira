@@ -187,6 +187,19 @@ class MoiraClient(object):
 		
 		return tuple(result)
 	
+	def probe(self, name, params, version = None):
+		"""Asks Moira server whether the supplied query will trigger any errors
+		without actually running it. Returns the resulting status code."""
+		
+		if version:
+			self.setVersion(version)
+		
+		query = (name,) + params
+		self.sendPacket(MR_ACCESS, query)
+		response = self.recvPacket()
+		
+		return response.opcode
+	
 	def close(self):
 		"""Closes the connection to the Moira server."""
 		
