@@ -9,6 +9,7 @@ import protocol
 import moira_constants
 import utils
 import datetime
+import re
 from errors import *
 
 class MoiraListMember(object):
@@ -25,7 +26,7 @@ class MoiraListMember(object):
 			raise MoiraUserError("Invalid list member type specified: %s" % mtype)
 		
 		self.client = client
-		self.mtype = mtype
+		self.mtype = mtype.upper()
 		self.name = name
 	
 	@staticmethod
@@ -52,6 +53,16 @@ class MoiraListMember(object):
 			return (self.mtype, self.name, self.tag)
 		else:
 			return (self.mtype, self.name)
+	
+	def __str__(self):
+		types = {
+			'USER' : 'user',
+			'LIST' : 'list',
+			'KERBEROS' : 'Kerberos principal',
+			'STRING' : 'string/email address',
+			'MACHINE' : 'machine',
+		}
+		return "%s %s" % (types[self.mtype], self.name)
 	
 	def __repr__(self):
 		return "%s:%s" % self.toTuple()[0:2]
@@ -87,7 +98,48 @@ class MoiraListMember(object):
 			result.append(list_obj)
 		
 		return frozenset(result)
+	
+	def exists(self):
+		# FIXME: this should be seperated into subclasses when they all exist
+		if self.mtype == self.User:
+			error_code = self.client.probe( 'get_user_account_by_login', (self.name,), version = 14 )
+			return error_code != moira_constants.MR_NO_MATCH
+		if self.mtype == self.List:
+			error_code = self.client.probe( 'get_list_info', (self.name,), version = 14 )
+			return error_code != moira_constants.MR_NO_MATCH
+		if self.mtype == self.String:
+			return True
+		return True # FIXME
+	
+	@staticmethod
+	def resolveName(client, name):
+		"""For a given name, attempts to determine the list member it suits.
+		Currently it recognizes user names, list names and Athena Kerberos
+		principals. Returns None if unable to determine."""
 		
+		match = re.match( "^(list|user|kerberos|string|machine):(.+)$", name, re.IGNORECASE )
+		if match:
+			mlist, name = match.grous()
+			return MoiraListMember(mlist.upper(), name)
+		
+		if re.match( "^[a-z0-9_]{3,8}$", name ):
+			attempt = MoiraListMember(client, MoiraListMember.User, name)
+			if attempt.exists():
+				return attempt
+		
+		if re.match( "^[^A-Z@:]+$", name ):
+			attempt = MoiraList(client, name)
+			if attempt.exists():
+				return attempt
+		
+		match = re.match( "^(.+)?@athena.mit.edu$", name, re.IGNORECASE )
+		if match:
+			principal, = match.groups()
+			return MoiraListMember(client, MoiraListMember.Kerberos, "%s@ATHENA.MIT.EDU" % principal)
+		
+		# FIXME: host support should be here
+		
+		return None
 
 class MoiraList(MoiraListMember):
 	def __init__(self, client, listname):
