@@ -41,7 +41,7 @@ def _read_u32(s):
 #     - Message length, including header (4 bytes)
 #     - Version (4 bytes), have to be equal MOIRA_PROTOCOL_VERSION
 #     - Opcode (client) / status (server) (4 bytes)
-#         In general, will be one of the moira_constants. However, it may also
+#         In general, will be one of the constants. However, it may also
 #         be a negative Kerberos error code or something else.
 #     - Amount of fields (4 bytes)
 #   2) Fields, each has the following form:
@@ -49,7 +49,7 @@ def _read_u32(s):
 #     - Value, padded with zeroes to four-byte boundary. It is supposed to be
 #         zero-terminated string, and I hope it is so.
 #
-class MoiraPacket(object):
+class Packet(object):
 	"""Represents a basic Moira packet, send either way (from client to server or from
 	server to client)."""
 	
@@ -91,20 +91,20 @@ class MoiraPacket(object):
 		
 		# Sanity checks for the header
 		if length % 4 != 0:
-			raise MoiraConnectionError("Malformed Moira package: the length is not a multiple of four")
+			raise ConnectionError("Malformed Moira package: the length is not a multiple of four")
 		if version != 2:
-			raise MoiraConnectionError("Moira protocol version mismatch")
+			raise ConnectionError("Moira protocol version mismatch")
 		# argc is parsed as unsigned, hence argc is always >= 0
 
 		# Read fields and truncate the body as we read
 		fields = []
 		for i in range(0, argc):
 			if len(body) < 4:
-				raise MoiraConnectionError("Moira protocol version mismatch")
+				raise ConnectionError("Moira protocol version mismatch")
 
 			field_len = _read_u32(body)
 			if field_len + 4 > len(body):
-				raise MoiraConnectionError("")
+				raise ConnectionError("")
 
 			body = body[4:]
 
@@ -119,7 +119,7 @@ class MoiraPacket(object):
 			fields.append(field)
 
 		if len(body) > 0:
-			raise MoiraConnectionError("Moira has sent package with out-of-field information")
+			raise ConnectionError("Moira has sent package with out-of-field information")
 
 		self.raw_len = length
 		self.opcode = status

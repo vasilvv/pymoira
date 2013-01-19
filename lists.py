@@ -6,13 +6,13 @@
 #
 
 import protocol
-import moira_constants
+import constants
 import utils
 import datetime
 import re
 from errors import *
 
-class MoiraListMember(object):
+class ListMember(object):
 	User = 'USER'
 	Kerberos = 'KERBEROS'
 	List = 'LIST'
@@ -23,7 +23,7 @@ class MoiraListMember(object):
 	
 	def __init__(self, client, mtype, name):
 		if mtype not in self.types:
-			raise MoiraUserError("Invalid list member type specified: %s" % mtype)
+			raise UserError("Invalid list member type specified: %s" % mtype)
 		
 		self.client = client
 		self.mtype = mtype.upper()
@@ -34,14 +34,14 @@ class MoiraListMember(object):
 		"""Constructs the relevant Moira list member object out of a type-name[-tag] tuple"""
 		
 		if len(member) not in {2, 3}:
-			raise MoiraUserError("Moira list member tuple must has a type-name[-tag] format")
+			raise UserError("Moira list member tuple must has a type-name[-tag] format")
 		
 		mtype, name = member[0:2]
 		
-		if mtype == MoiraListMember.List:
-			result = MoiraList(client, name)
+		if mtype == ListMember.List:
+			result = List(client, name)
 		else:
-			result = MoiraListMember(client, mtype, name)
+			result = ListMember(client, mtype, name)
 		
 		if len(member) > 2:
 			result.tag = member[2]
@@ -90,7 +90,7 @@ class MoiraListMember(object):
 		result = []
 		for entry in response:
 			name, active, public, hidden, is_mailing, is_afsgroup = entry
-			list_obj = MoiraList(self.client, name)
+			list_obj = List(self.client, name)
 			list_obj.active = active
 			list_obj.hidden = hidden
 			list_obj.is_mailing = is_mailing
@@ -103,10 +103,10 @@ class MoiraListMember(object):
 		# FIXME: this should be seperated into subclasses when they all exist
 		if self.mtype == self.User:
 			error_code = self.client.probe( 'get_user_account_by_login', (self.name,), version = 14 )
-			return error_code != moira_constants.MR_NO_MATCH
+			return error_code != constants.MR_NO_MATCH
 		if self.mtype == self.List:
 			error_code = self.client.probe( 'get_list_info', (self.name,), version = 14 )
-			return error_code != moira_constants.MR_NO_MATCH
+			return error_code != constants.MR_NO_MATCH
 		if self.mtype == self.String:
 			return True
 		return True # FIXME
@@ -120,32 +120,32 @@ class MoiraListMember(object):
 		match = re.match( "^(list|user|kerberos|string|machine):(.+)$", name, re.IGNORECASE )
 		if match:
 			mlist, name = match.grous()
-			return MoiraListMember(mlist.upper(), name)
+			return ListMember(mlist.upper(), name)
 		
 		if re.match( "^[a-z0-9_]{3,8}$", name ):
-			attempt = MoiraListMember(client, MoiraListMember.User, name)
+			attempt = ListMember(client, ListMember.User, name)
 			if attempt.exists():
 				return attempt
 		
 		if re.match( "^[^A-Z@:]+$", name ):
-			attempt = MoiraList(client, name)
+			attempt = List(client, name)
 			if attempt.exists():
 				return attempt
 		
 		match = re.match( "^(.+)?@athena.mit.edu$", name, re.IGNORECASE )
 		if match:
 			principal, = match.groups()
-			return MoiraListMember(client, MoiraListMember.Kerberos, "%s@ATHENA.MIT.EDU" % principal)
+			return ListMember(client, ListMember.Kerberos, "%s@ATHENA.MIT.EDU" % principal)
 		
 		# FIXME: host support should be here
 		
 		return None
 
-class MoiraList(MoiraListMember):
+class List(ListMember):
 	def __init__(self, client, listname):
 		# FIXME: name validation should go here
 		
-		super(MoiraList, self).__init__( client, MoiraListMember.List, listname )
+		super(List, self).__init__( client, ListMember.List, listname )
 	
 	def getMembersViaQuery(self, query_name):
 		"""Returns all the members of the list which are included into it explicitly,
@@ -154,7 +154,7 @@ class MoiraList(MoiraListMember):
 		response = self.client.query( query_name, (self.name,), version = 14 )
 		result = []
 		for member in response:
-			result.append( MoiraListMember.fromTuple(self.client, member) )
+			result.append( ListMember.fromTuple(self.client, member) )
 		
 		return frozenset(result)
 
@@ -172,13 +172,13 @@ class MoiraList(MoiraListMember):
 		
 		if server_side:
 			if tags:
-				raise MoiraUserError("Server-side expansion does not support member tag retrieval")
+				raise UserError("Server-side expansion does not support member tag retrieval")
 			
 			members = self.getMembersViaQuery("get_end_members_of_list")
 			if include_lists:
 				return members
 			else:
-				return frozenset( filter(lambda m: type(m) != MoiraList, members) )
+				return frozenset( filter(lambda m: type(m) != List, members) )
 
 		else:
 			# Already expanded lists
@@ -196,14 +196,14 @@ class MoiraList(MoiraListMember):
 			while to_expand:
 				current_depth += 1
 				if current_depth > max_depth:
-					raise MoiraUserError("List expansion depth limit exceeded")
+					raise UserError("List expansion depth limit exceeded")
 				
-				to_expand = {member.name for member in members if type(member) == MoiraList} - set(known)
+				to_expand = {member.name for member in members if type(member) == List} - set(known)
 				for sublist_name in to_expand:
 					try:
-						new_members = MoiraList(self.client, sublist_name).getExplicitMembers()
+						new_members = List(self.client, sublist_name).getExplicitMembers()
 					except MoiraError as err:
-						if err.code == moira_constants.MR_PERM:
+						if err.code == constants.MR_PERM:
 							denied.add(sublist_name)
 							known[sublist_name] = None
 							continue
@@ -214,7 +214,7 @@ class MoiraList(MoiraListMember):
 					members |= new_members
 			
 			if not include_lists:
-				members = filter( lambda m: type(m) != MoiraList, members )
+				members = filter( lambda m: type(m) != List, members )
 			
 			return (members, denied, known)
 	
@@ -274,7 +274,7 @@ class MoiraList(MoiraListMember):
 		
 		self.tagMember(member, "")
 
-class MoiraListTracer(object):
+class ListTracer(object):
 	"""A class which for a given list allows to determine why the certain member is on that list.
 	When you initialize it, it does the recursive expansion of the list on the client side,
 	and then you may ask the class for the inclusion paths for different members."""
@@ -299,7 +299,7 @@ class MoiraListTracer(object):
 				result[member].append(listname)
 		
 		self.inverse = result
-		self.inverseLists = { member.name : contents for member, contents in self.inverse.iteritems() if type(member) == MoiraList }
+		self.inverseLists = { member.name : contents for member, contents in self.inverse.iteritems() if type(member) == List }
 	
 	def trace(self, member):
 		"""Returns the pathways by which user is included into a list. The pathways
@@ -318,7 +318,7 @@ class MoiraListTracer(object):
 		newway = curway + (curlist,)
 		if curlist == self.mlist.name:
 			if len(output) == self.max_pathways:
-				raise MoiraUserError("Maximum number (%s) of possible inclusion pathways reached" % self.max_pathways)
+				raise UserError("Maximum number (%s) of possible inclusion pathways reached" % self.max_pathways)
 			output.append( newway[::-1] )
 			return
 		

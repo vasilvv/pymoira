@@ -5,14 +5,14 @@
 #
 
 import datetime
-from errors import MoiraUserError
+from errors import UserError
 
 def convertMoiraBool(val):
 	if val == '1':
 		return True
 	if val == '0':
 		return False
-	raise MoiraUserError("Invalid boolean value received from Moira server")
+	raise UserError("Invalid boolean value received from Moira server")
 
 def convertMoiraInt(val):
 	try:
@@ -29,7 +29,7 @@ def responseToDict(description, response):
 	date time."""
 	
 	if len(description) != len(response):
-		raise MoiraUserError("Error returned the response with invalid number of entries")
+		raise UserError("Error returned the response with invalid number of entries")
 	
 	result = {}
 	for value, field in ( (response[i], description[i]) for i in range( 0, len(response) ) ):
@@ -43,6 +43,6 @@ def responseToDict(description, response):
 		elif datatype == str:
 			result[name] = value
 		else:
-			raise MoiraUserError("Unsupported Moira data type specified: %s" % datatype)
+			raise UserError("Unsupported Moira data type specified: %s" % datatype)
 	
 	return result

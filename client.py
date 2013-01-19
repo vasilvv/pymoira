@@ -10,7 +10,7 @@ import socket
 from protocol import *
 from protocol import _read_u32
 
-from moira_constants import *
+from constants import *
 
 def locate_server():
 	"""Locates the Moira server through Hesiod."""
@@ -20,7 +20,7 @@ def locate_server():
 	
 	lookup = hesiod.Lookup("moira", "sloc")
 	if not lookup or not lookup.results:
-		raise MoiraConnectionError("Unable to locate Moira server through Hesiod")
+		raise ConnectionError("Unable to locate Moira server through Hesiod")
 	return random.choice(lookup.results)
 
 def _get_krb5_ap_req(service, server):
@@ -46,12 +46,12 @@ def _get_krb5_ap_req(service, server):
 	if token_gssapi[0] != chr(0x60) or \
 	   not (token_gssapi[2] == chr(0x06) or token_gssapi[4] == chr(0x06)) or \
 	   body_start == -1 or body_start < 8 or body_start > 64:
-		   raise MoiraConnectionError("Invalid GSSAPI token provided by Python's Kerberos API")
+		   raise ConnectionError("Invalid GSSAPI token provided by Python's Kerberos API")
 
 	body = token_gssapi[body_start + 2:]	
 	return body
 
-class MoiraClient(object):
+class Client(object):
 	"""The connection class for Moira. Allows querying, authentication and other
 	protocol-supported operations. Provides the foundation for building higher-level
 	abstractions."""
@@ -76,7 +76,7 @@ class MoiraClient(object):
 		self.socket.send(MOIRA_PROTOCOL_CHALLENGE)
 		response = self.socket.recv( len(MOIRA_PROTOCOL_RESPONSE) )
 		if response != MOIRA_PROTOCOL_RESPONSE:
-			raise MoiraConnectionError("Moira server failed to return the correct response to connection initiation request")
+			raise ConnectionError("Moira server failed to return the correct response to connection initiation request")
 	
 	def send(self, data):
 		"""A blocking method to send data to Moira using appropriate connection interface."""
@@ -93,7 +93,7 @@ class MoiraClient(object):
 			while len(data) < buffer_size:
 				new_data = self.socket.recv(buffer_size - len(data))
 				if len(new_data) == 0:
-					raise MoiraConnectionError("Connection was closed while more data was expected")
+					raise ConnectionError("Connection was closed while more data was expected")
 				data += new_data
 			return data
 		else:
@@ -102,7 +102,7 @@ class MoiraClient(object):
 	def sendPacket(self, opcode, data):
 		"""Sends a Moira packet to the server. This is a blocking operation."""
 		
-		packet = MoiraPacket()
+		packet = Packet()
 		packet.opcode = opcode
 		packet.data = data
 		self.send(packet.build())
@@ -112,9 +112,9 @@ class MoiraClient(object):
 		length_data = self.recv(4)
 		length = _read_u32(length_data)
 		if length < 4:
-			raise MoiraConnectionError("Invalid packet length specified")
+			raise ConnectionError("Invalid packet length specified")
 		remainder = self.recv(length - 4)
-		packet = MoiraPacket()
+		packet = Packet()
 		packet.parse(length_data + remainder)
 		return packet
 	
