@@ -3,7 +3,7 @@
 # This file generates the constants from Moira sources.
 # The first argument is path to those sources.
 
-import sys, re, os, os.path, subprocess
+import sys, re, os, os.path
 
 ##### Constants #####
 
