@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name = 'pymoira',
-      version = '1.0',
+      version = '0.1',
       description = 'Client library for MIT Moira service managment system protocol',
       author = 'Victor Vasiliev',
       author_email = 'vasilvv@mit.edu',
