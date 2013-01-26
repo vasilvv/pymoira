@@ -119,8 +119,8 @@ class ListMember(object):
 		
 		match = re.match( "^(list|user|kerberos|string|machine):(.+)$", name, re.IGNORECASE )
 		if match:
-			mlist, name = match.grous()
-			return ListMember(mlist.upper(), name)
+			mlist, name = match.groups()
+			return ListMember(client, mlist.upper(), name)
 		
 		if re.match( "^[a-z0-9_]{3,8}$", name ):
 			attempt = ListMember(client, ListMember.User, name)
