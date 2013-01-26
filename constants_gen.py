@@ -15,13 +15,13 @@ et_path = "lib/mr_et.et"
 
 basepath = sys.argv[1]
 if not os.path.isdir(basepath):
-	print "ERROR: the specified path is not a directory"
-	exit()
+    print "ERROR: the specified path is not a directory"
+    exit()
 
 with open(basepath + "/lib/mr_et.et", "r") as et_file_handler:
-	et_file = et_file_handler.read()
+    et_file = et_file_handler.read()
 with open(basepath + "/include/moira.h", "r") as header_file_handler:
-	header_file = header_file_handler.read()
+    header_file = header_file_handler.read()
 
 et_match_version = re.search( r'\$Id: (.+) \$', et_file )
 et_match_entries = re.findall( r'ec\s*(MR_[A-Z0-9_]+),\s*"([^"]+)"', et_file )
@@ -29,11 +29,11 @@ header_match_version = re.search( r'\$Id: (.+) \$', header_file )
 header_match_entries = re.findall( r'#define (MR_\S+|UNIQUE_\S+)\s+(".+"|[0-9x\-]+)', header_file )
 
 if not et_match_entries or not et_match_version:
-	print "ERROR: unable to parse mr_et file correctly"
-	exit()
+    print "ERROR: unable to parse mr_et file correctly"
+    exit()
 if not header_match_entries or not header_match_version:
-	print "ERROR: unable to parse moira.h file correctly"
-	exit()
+    print "ERROR: unable to parse moira.h file correctly"
+    exit()
 
 
 et_version = et_match_version.group(1)
@@ -51,19 +51,19 @@ print ""
 print "# Error codes"
 cur_code = et_base
 for match in et_match_entries:
-	print '%s = %s' % (match[0], repr(cur_code))
-	cur_code += 1
+    print '%s = %s' % (match[0], repr(cur_code))
+    cur_code += 1
 print ""
 
 print "# Error code descriptions"
 print "errors = {"
 for match in et_match_entries:
-	print '    %s : "%s",' % match
+    print '    %s : "%s",' % match
 print "}"
 print ""
 
 ##### Constatns from moira.h #####
 print "# Definitions from moira.h"
 for match in header_match_entries:
-	print '%s = %s' % match
+    print '%s = %s' % match
 print ""

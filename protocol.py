@@ -19,18 +19,18 @@ MOIRA_CLIENT_IDSTRING = "PyMoira"
 MOIRA_KERBEROS_SERVICE_NAME = "moira"
 
 MOIRA_QUERY_VERSION = 14
-MOIRA_MAX_LIST_DEPTH = 3072	# server/qsupport.pc, line 206
+MOIRA_MAX_LIST_DEPTH = 3072    # server/qsupport.pc, line 206
 
 #
 # Utility functions
 #
 
 def _fmt_u32(n):
-	return struct.pack("!I", n)
+    return struct.pack("!I", n)
 
 def _read_u32(s):
-	r, = struct.unpack("!I", s[0:4])
-	return r
+    r, = struct.unpack("!I", s[0:4])
+    return r
 
 #
 # The following object represents a packet in Moira dialogue.
@@ -50,78 +50,78 @@ def _read_u32(s):
 #         zero-terminated string, and I hope it is so.
 #
 class Packet(object):
-	"""Represents a basic Moira packet, send either way (from client to server or from
-	server to client)."""
-	
-	opcode = None
-	data = ()
-	
-	# Either built or received
-	raw = None
-	
-	def build(self):
-		"""Constructs a binary packet which may be sent to Moira server."""
-		
-		# First construct the body
-		body = ""
-		for item in self.data:
-			item += "\0"
-			lenstr = _fmt_u32( len(item) )
-			while len(item) % 4 != 0: item += "\0"
-			body += lenstr
-			body += item
-		
-		# Now that we know the length of the body, construct header
-		header = struct.pack("!IIiI",
-			16 + len(body),           # Total length
-			MOIRA_PROTOCOL_VERSION,	  # Protocol version
-			self.opcode,              # Operation
-			len(self.data)            # Field count
-		)
-		
-		self.raw = header + body
-		return self.raw
-	
-	def parse(self, orig):
-		"""Parses the packet from the network."""
-		
-		# Seperate header and body
-		length, version, status, argc = struct.unpack("!IIiI", orig[:16])
-		body = orig[16:]
-		
-		# Sanity checks for the header
-		if length % 4 != 0:
-			raise ConnectionError("Malformed Moira package: the length is not a multiple of four")
-		if version != 2:
-			raise ConnectionError("Moira protocol version mismatch")
-		# argc is parsed as unsigned, hence argc is always >= 0
+    """Represents a basic Moira packet, send either way (from client to server or from
+    server to client)."""
+    
+    opcode = None
+    data = ()
+    
+    # Either built or received
+    raw = None
+    
+    def build(self):
+        """Constructs a binary packet which may be sent to Moira server."""
+        
+        # First construct the body
+        body = ""
+        for item in self.data:
+            item += "\0"
+            lenstr = _fmt_u32( len(item) )
+            while len(item) % 4 != 0: item += "\0"
+            body += lenstr
+            body += item
+        
+        # Now that we know the length of the body, construct header
+        header = struct.pack("!IIiI",
+            16 + len(body),           # Total length
+            MOIRA_PROTOCOL_VERSION,      # Protocol version
+            self.opcode,              # Operation
+            len(self.data)            # Field count
+        )
+        
+        self.raw = header + body
+        return self.raw
+    
+    def parse(self, orig):
+        """Parses the packet from the network."""
+        
+        # Seperate header and body
+        length, version, status, argc = struct.unpack("!IIiI", orig[:16])
+        body = orig[16:]
+        
+        # Sanity checks for the header
+        if length % 4 != 0:
+            raise ConnectionError("Malformed Moira package: the length is not a multiple of four")
+        if version != 2:
+            raise ConnectionError("Moira protocol version mismatch")
+        # argc is parsed as unsigned, hence argc is always >= 0
 
-		# Read fields and truncate the body as we read
-		fields = []
-		for i in range(0, argc):
-			if len(body) < 4:
-				raise ConnectionError("Moira protocol version mismatch")
+        # Read fields and truncate the body as we read
+        fields = []
+        for i in range(0, argc):
+            if len(body) < 4:
+                raise ConnectionError("Moira protocol version mismatch")
 
-			field_len = _read_u32(body)
-			if field_len + 4 > len(body):
-				raise ConnectionError("")
+            field_len = _read_u32(body)
+            if field_len + 4 > len(body):
+                raise ConnectionError("")
 
-			body = body[4:]
+            body = body[4:]
 
-			if field_len % 4 == 0:
-				actual_len = field_len
-			else:
-				actual_len = field_len + (4 - field_len % 4)
+            if field_len % 4 == 0:
+                actual_len = field_len
+            else:
+                actual_len = field_len + (4 - field_len % 4)
 
-			field = body[:actual_len].rstrip("\0")
-			body = body[actual_len:]
+            field = body[:actual_len].rstrip("\0")
+            body = body[actual_len:]
 
-			fields.append(field)
+            fields.append(field)
 
-		if len(body) > 0:
-			raise ConnectionError("Moira has sent package with out-of-field information")
+        if len(body) > 0:
+            raise ConnectionError("Moira has sent package with out-of-field information")
 
-		self.raw_len = length
-		self.opcode = status
-		self.data = tuple(fields)
-		self.raw = orig
+        self.raw_len = length
+        self.opcode = status
+        self.data = tuple(fields)
+        self.raw = orig
