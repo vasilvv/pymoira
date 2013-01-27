@@ -174,7 +174,7 @@ class Client(object):
         
         result = []
         
-        query = (name,) + params
+        query = (name,) + tuple(params)
         self.sendPacket(MR_QUERY, query)
         response = self.recvPacket()
 
