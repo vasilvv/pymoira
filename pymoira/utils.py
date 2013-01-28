@@ -23,6 +23,14 @@ def convertMoiraInt(val):
 def convertMoiraDateTime(val):
     return datetime.datetime.strptime(val, '%d-%b-%Y %H:%M:%S')
 
+def convertToMoiraValue(val):
+    """Converts data from Python to Moira protocol representation."""
+
+    if type(val) == bool:
+        return '1' if val else '0'
+    else:
+        return str(val)
+
 def responseToDict(description, response):
     """Transforms the query response to a dictionary using a description
     of format ( (field name, type) ), where types are bool, int, string and

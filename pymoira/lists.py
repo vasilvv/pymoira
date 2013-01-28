@@ -142,6 +142,27 @@ class ListMember(object):
         return None
 
 class List(ListMember):
+    info_query_description = (
+        ('name', str),
+        ('active', bool),
+        ('public', bool),
+        ('hidden', bool),
+        ('is_mailing', bool),
+        ('is_afsgroup', bool),
+        ('gid', int),
+        ('is_nfsgroup', bool),
+        ('is_mailman_list', bool),
+        ('mailman_server', str),
+        ('owner_type', str),
+        ('owner_name', str),
+        ('memacl_type', str),
+        ('memacl_name', str),
+        ('description', str),
+        ('lastmod_datetime', datetime.datetime),
+        ('lastmod_by', str),
+        ('lastmod_with', str),
+    )
+
     def __init__(self, client, listname):
         # FIXME: name validation should go here
         
@@ -221,31 +242,25 @@ class List(ListMember):
     def loadInfo(self):
         """Loads the information about the list from the server into the object."""
         
-        query_description = (
-            ('name', str),
-            ('active', bool),
-            ('public', bool),
-            ('hidden', bool),
-            ('is_mailing', bool),
-            ('is_afsgroup', bool),
-            ('gid', int),
-            ('is_nfsgroup', bool),
-            ('is_mailman_list', bool),
-            ('mailman_server', str),
-            ('owner_type', str),
-            ('owner_name', str),
-            ('memacl_type', str),
-            ('memacl_name', str),
-            ('description', str),
-            ('lastmod_datetime', datetime.datetime),
-            ('lastmod_by', str),
-            ('lastmod_with', str),
-        )
-        
         response, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
-        result = utils.responseToDict(query_description, response)
+        result = utils.responseToDict(self.info_query_description, response)
         self.__dict__.update(result)
     
+    def updateParams(self, **updates):
+        """Updates a certain parameter in user information."""
+
+        fields = [name for name, mtype in self.info_query_description]
+        fields = fields[:-3]
+        if not all(field in fields for field in updates):
+            raise UserError('Invalid list parameter specified')
+
+        args, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
+        args = list(args)[:-3]
+        for field, value in updates.iteritems():
+            args[fields.index(field)] = utils.convertToMoiraValue(value)
+
+        self.client.query( 'update_list', [self.name] + args, version = 14 )
+
     def countMembers(self):
         """Returns the amount of explicit members of the list."""
         
@@ -273,6 +288,65 @@ class List(ListMember):
         """Removes the tag from the member of the list."""
         
         self.tagMember(member, "")
+    
+    def rename(self, new_name):
+        """Changes the name of the list."""
+
+        self.updateParams(name = new_name)
+
+    def setActiveFlag(self, new_value):
+        """Marks the list as either active or inactive."""
+
+        self.updateParams(active = new_value)
+    
+    def setPublicFlag(self, new_value):
+        """Marks the list as either public or private. Public lists are lists
+        on which users are able to add or remove themselves without being on ACL."""
+
+        self.updateParams(public = new_value)
+    
+    def setHiddenFlag(self, new_value):
+        """Marks the list as either visible or hidden. If a list is hidden,
+        it is harder to get information about this list or even to find that it exists."""
+
+        self.updateParams(hidden = new_value)
+    
+    def setMailingListFlag(self, new_value):
+        """Marks the list as a mailing list."""
+
+        self.updateParams(is_mailing = new_value)
+    
+    def setAFSGroupFlag(self, new_value):
+        """Mark the list as an AFS group."""
+
+        self.updateParams(is_afsgroup = new_value)
+    
+    def setNFSGroupFlag(self, new_value):
+        """Mark the list as an NFS group. NFS groups are exposed as Unix groups
+        through Hesiod. Note that currently, due to the issues with Hesiod, if
+        user is on too many NFS groups, the group list is truncated."""
+
+        self.updateParams(is_nfsgroup = new_value)
+
+    def setOwner(self, new_owner):
+        """Change the owner of the list."""
+
+        self.updateParams(owner_type = new_owner.mtype, owner_name = new_owner.name)
+
+    def setMembershipACL(self, new_memacl):
+        """Set the membership ACL of the list. Membership ACL is able to add members
+        to the list or remove them from it, but cannot change other properties.
+        It may be set to None."""
+
+        if new_memacl:
+            self.updateParams(memacl_type = new_memacl.mtype, memacl_name = new_memacl.name)
+        else:
+            self.updateParams(memacl_type = 'NONE', memacl_name = 'NONE')
+    
+    def setDescription(self, new_value):
+        """Updates the description of the list."""
+
+        self.updateParams(description = new_value)
 
 class ListTracer(object):
     """A class which for a given list allows to determine why the certain member is on that list.
