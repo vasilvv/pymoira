@@ -348,6 +348,23 @@ class List(ListMember):
 
         self.updateParams(description = new_value)
 
+    def serialize(self):
+        """Stores all list settings inside a dictionary, which may then
+        be stored in JSON or other machine-readable format and reset from it."""
+
+        self.loadInfo()
+        members = self.getExplicitMembers(tags = True)
+        result = {}
+        for field, field_type in self.info_query_description:
+            result[field] = getattr(self, field)
+
+            # datetime is not serialized by JSON and other modules
+            if field_type == datetime.datetime:
+                result[field] = str(result[field])
+
+        result['members'] = [member.toTuple() for member in members]
+        return result
+
 class ListTracer(object):
     """A class which for a given list allows to determine why the certain member is on that list.
     When you initialize it, it does the recursive expansion of the list on the client side,
