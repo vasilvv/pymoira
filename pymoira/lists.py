@@ -268,6 +268,9 @@ class List(ListMember):
     
     def addMember(self, member, tag = None):
         """Adds a member into the list."""
+
+        if not tag and hasattr(member, 'tag'):
+            tag = member.tab
         
         if tag:
             self.client.query( 'add_tagged_member_to_list', (self.name, member.mtype, member.name, tag), version = 14 )
