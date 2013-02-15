@@ -22,7 +22,7 @@ class Filesys(object):
         ('owner_user', str),
         ('owner_group', str),
         ('create', bool),
-        ('type', str),
+        ('locker_type', str),
         ('lastmod_datetime', datetime.datetime),
         ('lastmod_by', str),
         ('lastmod_with', str),
