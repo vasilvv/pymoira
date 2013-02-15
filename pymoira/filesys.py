@@ -6,6 +6,7 @@
 #
 
 import protocol
+import constants
 import utils
 import datetime
 from errors import *
@@ -27,6 +28,17 @@ class Filesys(object):
         ('lastmod_by', str),
         ('lastmod_with', str),
     )
+    quota_query_description = (
+        ('filesys', str),
+        ('type', str),
+        ('name', str),
+        ('size', int),
+        ('dir', str),
+        ('machine', str),
+        ('lastmod_datetime', datetime.datetime),
+        ('lastmod_by', str),
+        ('lastmod_with', str),
+    )
 
     def __init__(self, client, name):
         self.client = client
@@ -38,3 +50,18 @@ class Filesys(object):
         response, = self.client.query( 'get_filesys_by_label', (self.name, ), version = 14 )
         result = utils.responseToDict(self.info_query_description, response)
         self.__dict__.update(result)
+
+        try:
+            self.loadQuota()
+        except MoiraError as err:
+            if err.code == constants.MR_NO_MATCH:
+                self.quota = None
+            else:
+                raise err
+
+    def loadQuota(self):
+        """Loads the information about the quota on the filesystem."""
+
+        response, = self.client.query( 'get_quota_by_filesys', (self.label, ), version = 14 )
+        result = utils.responseToDict(self.quota_query_description, response)
+        self.quota, self.quota_lastmod_datetime, self.quota_lastmod_by, self.quota_lastmod_with = result['size'], result['lastmod_datetime'], result['lastmod_by'], result['lastmod_with']
