@@ -189,12 +189,15 @@ class List(ListMember):
         return self.getMembersViaQuery(query_name)
 
     def getAllMembers(self, server_side = False, include_lists = False, tags = False):
-        """Performs a recursive expansion of the given list. This may be done both on the side of the client
-        and on the side of the server. In the latter case, the server does not communicate the list of the nested
-        lists to which user does not have access, so only the resulting list of members is returned. In case of the client-side
-        expansion however, it causes the method to return the (members, inaccessible_lists, lists) tuple instead of just the member list.
-        The inaccessible_lists is a set of lists to which the access was denied, and the lists is the dictionary with the memers of all
-        lists encountered during the expansion process."""
+        """Performs a recursive expansion of the given list. This may be done both
+        on the side of the client and on the side of the server. In the latter case,
+        the server does not communicate the list of the nested lists to which user
+        does not have access, so only the resulting list of members is returned.
+        In case of the client-side expansion however, it causes the method to return
+        the (members, inaccessible_lists, lists) tuple instead of just the member list.
+        The inaccessible_lists is a set of lists to which the access was denied, and
+        the lists is the dictionary with the memers of all lists encountered during
+        the expansion process."""
         
         if server_side:
             if tags:
