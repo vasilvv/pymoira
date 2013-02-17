@@ -166,7 +166,12 @@ class List(ListMember):
     def __init__(self, client, listname):
         # FIXME: name validation should go here
         
-        super(List, self).__init__( client, ListMember.List, listname )
+        try:
+            listname.decode('ascii')
+            super(List, self).__init__( client, ListMember.List, listname )
+        except UnicodeDecodeError:
+            idn = listname.decode('utf-8').encode('idna')
+            super(List, self).__init__( client, ListMember.List, idn )
     
     def getMembersViaQuery(self, query_name):
         """Returns all the members of the list which are included into it explicitly,
