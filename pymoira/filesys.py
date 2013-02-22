@@ -2,7 +2,7 @@
 ## PyMoira client library
 ##
 ## This file contains the more abstract methods which allow user to work with
-## lists and list members.
+## Moira filesystems.
 #
 
 import protocol
