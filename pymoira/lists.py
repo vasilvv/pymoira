@@ -253,6 +253,8 @@ class List(ListMember):
         response, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
         result = utils.responseToDict(self.info_query_description, response)
         self.__dict__.update(result)
+        self.owner  = ListMember( self.client, self.owner_type, self.owner_name )
+        self.memacl = ListMember( self.client, self.memacl_type, self.memacl_name ) if self.memacl_type != 'NONE' else None
     
     def updateParams(self, **updates):
         """Updates a certain parameter in user information."""
