@@ -64,7 +64,7 @@ class User(ListMember):
         self.__dict__.update(result)
 
         if self.sponsor_type != 'NONE':
-            self.sponsor = ListMember(self.client, self.sponsor_type, self.sponsor_name)
+            self.sponsor = ListMember.create(self.client, self.sponsor_type, self.sponsor_name)
         else:
             self.sponsor = None
 

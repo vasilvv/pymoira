@@ -28,7 +28,23 @@ class ListMember(object):
         self.client = client
         self.mtype = mtype.upper()
         self.name = name
-    
+
+    @staticmethod
+    def create(client, mtype, name):
+        """Constructs the specific object for a given list member type."""
+
+        # Types are imported here in order to avoid circular dependencies
+        if mtype == ListMember.List:
+            return List(client, name)
+        elif mtype == ListMember.User:
+            from user import User
+            return User(client, name)
+        elif mtype == ListMember.Machine:
+            from host import Host
+            return Host(client, name, canonicalize = False)
+        else:
+            return ListMember(client, mtype, name)
+
     @staticmethod
     def fromTuple(client, member):
         """Constructs the relevant Moira list member object out of a type-name[-tag] tuple"""
@@ -38,11 +54,8 @@ class ListMember(object):
         
         mtype, name = member[0:2]
         
-        if mtype == ListMember.List:
-            result = List(client, name)
-        else:
-            result = ListMember(client, mtype, name)
-        
+        result = ListMember.create(client, mtype, name)
+
         if len(member) > 2:
             result.tag = member[2]
         
@@ -253,8 +266,8 @@ class List(ListMember):
         response, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
         result = utils.responseToDict(self.info_query_description, response)
         self.__dict__.update(result)
-        self.owner  = ListMember( self.client, self.owner_type, self.owner_name )
-        self.memacl = ListMember( self.client, self.memacl_type, self.memacl_name ) if self.memacl_type != 'NONE' else None
+        self.owner  = ListMember.create( self.client, self.owner_type, self.owner_name )
+        self.memacl = ListMember.create( self.client, self.memacl_type, self.memacl_name ) if self.memacl_type != 'NONE' else None
     
     def updateParams(self, **updates):
         """Updates a certain parameter in user information."""
