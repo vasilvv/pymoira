@@ -5,11 +5,11 @@
 ## Moira filesystems.
 #
 
-import protocol
-import constants
-import utils
+from . import protocol
+from . import constants
+from . import utils
 import datetime
-from errors import *
+from .errors import *
 
 class Filesys(object):
     info_query_description = (

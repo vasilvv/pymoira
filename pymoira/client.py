@@ -7,10 +7,10 @@
 
 import socket
 
-from protocol import *
-from protocol import _read_u32
+from .protocol import *
+from .protocol import _read_u32
 
-from constants import *
+from .constants import *
 
 def locate_server():
     """Locates the Moira server through Hesiod."""

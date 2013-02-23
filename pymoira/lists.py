@@ -5,12 +5,12 @@
 ## lists and list members.
 #
 
-import protocol
-import constants
-import utils
+from . import protocol
+from . import constants
+from . import utils
 import datetime
 import re
-from errors import *
+from .errors import *
 
 class ListMember(object):
     User = 'USER'
@@ -37,10 +37,10 @@ class ListMember(object):
         if mtype == ListMember.List:
             return List(client, name)
         elif mtype == ListMember.User:
-            from user import User
+            from .user import User
             return User(client, name)
         elif mtype == ListMember.Machine:
-            from host import Host
+            from .host import Host
             return Host(client, name, canonicalize = False)
         else:
             return ListMember(client, mtype, name)
@@ -220,7 +220,7 @@ class List(ListMember):
             if include_lists:
                 return members
             else:
-                return frozenset( filter(lambda m: type(m) != List, members) )
+                return frozenset( [m for m in members if type(m) != List] )
 
         else:
             # Already expanded lists
@@ -256,7 +256,7 @@ class List(ListMember):
                     members |= new_members
             
             if not include_lists:
-                members = filter( lambda m: type(m) != List, members )
+                members = [m for m in members if type(m) != List]
             
             return (members, denied, known)
     
@@ -279,7 +279,7 @@ class List(ListMember):
 
         args, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
         args = list(args)[:-3]
-        for field, value in updates.iteritems():
+        for field, value in updates.items():
             args[fields.index(field)] = utils.convertToMoiraValue(value)
 
         self.client.query( 'update_list', [self.name] + args, version = 14 )
@@ -406,7 +406,7 @@ class ListTracer(object):
         """Creates the [member -> lists on which it is explicitly on] dictionary."""
         
         result = {}
-        for listname, members in self.lists.iteritems():
+        for listname, members in self.lists.items():
             if not members:
                 continue
 
@@ -416,7 +416,7 @@ class ListTracer(object):
                 result[member].append(listname)
         
         self.inverse = result
-        self.inverseLists = { member.name : contents for member, contents in self.inverse.iteritems() if type(member) == List }
+        self.inverseLists = { member.name : contents for member, contents in self.inverse.items() if type(member) == List }
     
     def trace(self, member):
         """Returns the pathways by which user is included into a list. The pathways

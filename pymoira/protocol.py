@@ -6,7 +6,7 @@
 
 import struct
 
-from errors import *
+from .errors import *
 
 #
 # Protocol-related constants

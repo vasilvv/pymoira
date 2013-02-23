@@ -4,7 +4,7 @@
 ## This file contains the Moira-related errors.
 #
 
-import constants
+from . import constants
 
 class BaseError(Exception):
     """Any exception thrown by the library is inhereted from this"""

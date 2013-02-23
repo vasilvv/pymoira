@@ -5,12 +5,12 @@
 ## users.
 #
 
-import protocol
-import constants
-import utils
+from . import protocol
+from . import constants
+from . import utils
 import datetime
-from lists import ListMember
-from errors import *
+from .lists import ListMember
+from .errors import *
 
 class User(ListMember):
     Registerable = 0

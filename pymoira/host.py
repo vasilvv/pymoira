@@ -4,7 +4,7 @@
 ## This file contains the classes which aid in dealing with Moira hosts.
 #
 
-from lists import ListMember
+from .lists import ListMember
 import socket
 
 class Host(ListMember):
