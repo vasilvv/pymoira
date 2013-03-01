@@ -9,4 +9,5 @@ Package: python-pymoira
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends}, python-hesiod, python-kerberos
 Description: Client library for MIT Moira service managment system.
-
+ Pymoira is a pure-Python implementation of Moira Service Management Protocol,
+ which provides high-level abstractions for different Moira-related objects.
