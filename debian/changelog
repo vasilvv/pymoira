@@ -1,3 +1,9 @@
+python-pymoira (0.9-1) unstable; urgency=low
+
+  * Upgrade upstream to 0.9. 
+
+ -- Victor Vasiliev <vasilvv@mit.edu>  Fri, 01 Mar 2013 18:26:33 -0500
+
 python-pymoira (0.1-1) unstable; urgency=low
 
   * Initial release
