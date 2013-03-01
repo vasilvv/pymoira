@@ -147,10 +147,16 @@ class ListMember(object):
             if attempt.exists():
                 return attempt
         
-        match = re.match( "^(.+)?@athena.mit.edu$", name, re.IGNORECASE )
+        if re.match( "^[a-z0-9_]{3,8}/[a-z0-9_]+$", name):
+            return ListMember(client, ListMember.Kerberos, "%s@ATHENA.MIT.EDU" % name)
+
+        # Yes, valid email address may actually contain "/", I know about it.
+        # However, if do this, you already probably break a lot of things,
+        # and Moira will not allow that as a string entry anyways.
+        match = re.match( r"^([a-z0-9_]+/[a-z0-9_]+)@([a-z0-9.\-]+)$", name, re.IGNORECASE)
         if match:
-            principal, = match.groups()
-            return ListMember(client, ListMember.Kerberos, "%s@ATHENA.MIT.EDU" % principal)
+            principal, hostname = match.groups()
+            return ListMember(client, ListMember.Kerberos, "%s@%s" % (principal, hostname.upper()))
         
         # FIXME: host support should be here
         
