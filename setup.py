@@ -9,4 +9,4 @@ setup(name = 'pymoira',
       author_email = 'vasilvv@mit.edu',
       url = 'https://github.com/vasilvv/pymoira',
       license = 'MIT',
-      py_modules = ['pymoira'])
+      packages = ['pymoira'])
