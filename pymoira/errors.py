@@ -37,3 +37,8 @@ class UserError(BaseError):
     """An error related to Moira but not returned from the server."""
     
     pass
+
+class AuthenticationError(BaseError):
+    """An error related to the authentication process."""
+
+    pass
