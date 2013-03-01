@@ -185,8 +185,8 @@ class Owner(ListMember):
                 m = stubs.Container()
                 m.name = name
                 result.append(m)
-            if mtype == 'CONTAINER_MEMACL':
-                m = stubs.Container()
+            if mtype == 'CONTAINER-MEMACL':
+                m = stubs.ContainerMembershipACL()
                 m.name = name
                 result.append(m)
             if mtype == 'FILESYS':

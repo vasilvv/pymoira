@@ -44,6 +44,9 @@ class Filesys(object):
         self.client = client
         self.name = name
 
+    def __cmp__(self, other):
+        return cmp(self.name, other.name)
+
     def loadInfo(self):
         """Loads the information about the list from the server into the object."""
         
