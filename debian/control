@@ -7,6 +7,6 @@ Standards-Version: 3.9.1
 
 Package: python-pymoira
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, python-hesiod
+Depends: ${misc:Depends}, ${python:Depends}, python-hesiod, python-kerberos
 Description: Client library for MIT Moira service managment system.
 
