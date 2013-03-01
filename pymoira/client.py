@@ -7,10 +7,10 @@
 
 import socket
 
-from protocol import *
-from protocol import _read_u32
+from .protocol import *
+from .protocol import _read_u32
 
-from constants import *
+from .constants import *
 
 def locate_server():
     """Locates the Moira server through Hesiod."""
@@ -27,29 +27,33 @@ def _get_krb5_ap_req(service, server):
     """Returns the AP_REQ Kerberos 5 ticket for a given service."""
 
     import kerberos, base64
-    status_code, context = kerberos.authGSSClientInit( 'moira@%s' % server )
-    kerberos.authGSSClientStep(context, "")
-    token_gssapi = base64.b64decode( kerberos.authGSSClientResponse(context) )
+    try:
+        status_code, context = kerberos.authGSSClientInit( 'moira@%s' % server )
+        kerberos.authGSSClientStep(context, "")
+        token_gssapi = base64.b64decode( kerberos.authGSSClientResponse(context) )
 
-    # The following code "parses" GSSAPI token as described in RFC 2743 and RFC 4121.
-    # "Parsing" in this context means throwing out the GSSAPI header correctly
-    # while doing some very basic validation of its contents.
-    # 
-    # This code is here because Python's interface provides only GSSAPI interface,
-    # and Moira does not use GSSAPI.
-    # (FIXTHEM: it should)
-    # 
-    # FIXME: this probably should either parse tokens properly or use another
-    # Kerberos bindings for Python.
-    
-    body_start = token_gssapi.find( chr(0x01) + chr(0x00) )    # 01 00 indicates that this is AP_REQ
-    if token_gssapi[0] != chr(0x60) or \
-       not (token_gssapi[2] == chr(0x06) or token_gssapi[4] == chr(0x06)) or \
-       body_start == -1 or body_start < 8 or body_start > 64:
-           raise ConnectionError("Invalid GSSAPI token provided by Python's Kerberos API")
+        # The following code "parses" GSSAPI token as described in RFC 2743 and RFC 4121.
+        # "Parsing" in this context means throwing out the GSSAPI header correctly
+        # while doing some very basic validation of its contents.
+        # 
+        # This code is here because Python's interface provides only GSSAPI interface,
+        # and Moira does not use GSSAPI.
+        # (FIXTHEM: it should)
+        # 
+        # FIXME: this probably should either parse tokens properly or use another
+        # Kerberos bindings for Python.
+        # Note that krb5 bindings are even more horrible.
+        
+        body_start = token_gssapi.find( chr(0x01) + chr(0x00) )    # 01 00 indicates that this is AP_REQ
+        if token_gssapi[0] != chr(0x60) or \
+        not (token_gssapi[2] == chr(0x06) or token_gssapi[4] == chr(0x06)) or \
+        body_start == -1 or body_start < 8 or body_start > 64:
+            raise ConnectionError("Invalid GSSAPI token provided by Python's Kerberos API")
 
-    body = token_gssapi[body_start + 2:]    
-    return body
+        body = token_gssapi[body_start + 2:]    
+        return body
+    except kerberos.GSSError as err:
+        raise AuthenticationError("Kerberos authentication error: %s" % err[1][0])
 
 class Client(object):
     """The connection class for Moira. Allows querying, authentication and other

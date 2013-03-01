@@ -5,7 +5,7 @@
 #
 
 import datetime
-from errors import UserError
+from .errors import UserError
 
 def convertMoiraBool(val):
     if val == '1':

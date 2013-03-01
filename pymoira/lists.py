@@ -5,12 +5,14 @@
 ## lists and list members.
 #
 
-import protocol
-import constants
-import utils
+from . import protocol
+from . import constants
+from . import utils
+from . import stubs
 import datetime
 import re
-from errors import *
+from .errors import *
+from .filesys import Filesys
 
 class ListMember(object):
     User = 'USER'
@@ -28,7 +30,23 @@ class ListMember(object):
         self.client = client
         self.mtype = mtype.upper()
         self.name = name
-    
+
+    @staticmethod
+    def create(client, mtype, name):
+        """Constructs the specific object for a given list member type."""
+
+        # Types are imported here in order to avoid circular dependencies
+        if mtype == ListMember.List:
+            return List(client, name)
+        elif mtype == ListMember.User:
+            from .user import User
+            return User(client, name)
+        elif mtype == ListMember.Machine:
+            from .host import Host
+            return Host(client, name, canonicalize = False)
+        else:
+            return ListMember(client, mtype, name)
+
     @staticmethod
     def fromTuple(client, member):
         """Constructs the relevant Moira list member object out of a type-name[-tag] tuple"""
@@ -38,11 +56,8 @@ class ListMember(object):
         
         mtype, name = member[0:2]
         
-        if mtype == ListMember.List:
-            result = List(client, name)
-        else:
-            result = ListMember(client, mtype, name)
-        
+        result = ListMember.create(client, mtype, name)
+
         if len(member) > 2:
             result.tag = member[2]
         
@@ -132,16 +147,81 @@ class ListMember(object):
             if attempt.exists():
                 return attempt
         
-        match = re.match( "^(.+)?@athena.mit.edu$", name, re.IGNORECASE )
+        if re.match( "^[a-z0-9_]{3,8}/[a-z0-9_]+$", name):
+            return ListMember(client, ListMember.Kerberos, "%s@ATHENA.MIT.EDU" % name)
+
+        # Yes, valid email address may actually contain "/", I know about it.
+        # However, if do this, you already probably break a lot of things,
+        # and Moira will not allow that as a string entry anyways.
+        match = re.match( r"^([a-z0-9_]+/[a-z0-9_]+)@([a-z0-9.\-]+)$", name, re.IGNORECASE)
         if match:
-            principal, = match.groups()
-            return ListMember(client, ListMember.Kerberos, "%s@ATHENA.MIT.EDU" % principal)
+            principal, hostname = match.groups()
+            return ListMember(client, ListMember.Kerberos, "%s@%s" % (principal, hostname.upper()))
         
         # FIXME: host support should be here
         
         return None
 
-class List(ListMember):
+# Users and lists are only object capable of owning other objects
+class Owner(ListMember):
+    """This class provides a getOwnedObjects() method which allows to determine which
+    objects are owned by this object."""
+
+    # Currently known ownable objects:
+    # CONTAINER
+    # CONTAINER-MEMACL
+    # FILESYS
+    # LIST
+    # MACHINE
+    # QUERY
+    # QUOTA (alleged by source, was not able to find in real life)
+    # SERVICE (alleged by source)
+    # ZEPHYR
+
+    def getOwnedObjects(self, recursive = False):
+        """Return all the objects owned by this owner."""
+
+        owner_type = ('R' + self.mtype) if recursive else self.mtype
+
+        response = self.client.query( 'get_ace_use', (owner_type, self.name), version = 14 )
+
+        result = []
+        for mtype, name in response:
+            if mtype == 'CONTAINER':
+                m = stubs.Container()
+                m.name = name
+                result.append(m)
+            if mtype == 'CONTAINER-MEMACL':
+                m = stubs.ContainerMembershipACL()
+                m.name = name
+                result.append(m)
+            if mtype == 'FILESYS':
+                result.append( Filesys(self.client, name) )
+            if mtype == 'LIST':
+                result.append( List(self.client, name) )
+            if mtype == 'MACHINE':
+                from .host import Host
+                result.append( Host(self.client, name, canonicalize = False) )
+            if mtype == 'QUERY':
+                m = stubs.Query()
+                m.name = name
+                result.append(m)
+            if mtype == 'QUOTA':
+                m = stubs.Quota()
+                m.name = name
+                result.append(m)
+            if mtype == 'SERVICE':
+                m = stubs.Service()
+                m.name = name
+                result.append(m)
+            if mtype == 'ZEPHYR':
+                m = stubs.ZephyrClass()
+                m.name = name
+                result.append(m)
+
+        return result
+
+class List(Owner):
     info_query_description = (
         ('name', str),
         ('active', bool),
@@ -166,7 +246,12 @@ class List(ListMember):
     def __init__(self, client, listname):
         # FIXME: name validation should go here
         
-        super(List, self).__init__( client, ListMember.List, listname )
+        try:
+            listname.decode('ascii')
+            super(List, self).__init__( client, ListMember.List, listname )
+        except UnicodeDecodeError:
+            idn = listname.decode('utf-8').encode('idna')
+            super(List, self).__init__( client, ListMember.List, idn )
     
     def getMembersViaQuery(self, query_name):
         """Returns all the members of the list which are included into it explicitly,
@@ -184,12 +269,15 @@ class List(ListMember):
         return self.getMembersViaQuery(query_name)
 
     def getAllMembers(self, server_side = False, include_lists = False, tags = False):
-        """Performs a recursive expansion of the given list. This may be done both on the side of the client
-        and on the side of the server. In the latter case, the server does not communicate the list of the nested
-        lists to which user does not have access, so only the resulting list of members is returned. In case of the client-side
-        expansion however, it causes the method to return the (members, inaccessible_lists, lists) tuple instead of just the member list.
-        The inaccessible_lists is a set of lists to which the access was denied, and the lists is the dictionary with the memers of all
-        lists encountered during the expansion process."""
+        """Performs a recursive expansion of the given list. This may be done both
+        on the side of the client and on the side of the server. In the latter case,
+        the server does not communicate the list of the nested lists to which user
+        does not have access, so only the resulting list of members is returned.
+        In case of the client-side expansion however, it causes the method to return
+        the (members, inaccessible_lists, lists) tuple instead of just the member list.
+        The inaccessible_lists is a set of lists to which the access was denied, and
+        the lists is the dictionary with the memers of all lists encountered during
+        the expansion process."""
         
         if server_side:
             if tags:
@@ -199,7 +287,7 @@ class List(ListMember):
             if include_lists:
                 return members
             else:
-                return frozenset( filter(lambda m: type(m) != List, members) )
+                return frozenset( [m for m in members if type(m) != List] )
 
         else:
             # Already expanded lists
@@ -235,7 +323,7 @@ class List(ListMember):
                     members |= new_members
             
             if not include_lists:
-                members = filter( lambda m: type(m) != List, members )
+                members = [m for m in members if type(m) != List]
             
             return (members, denied, known)
     
@@ -245,6 +333,8 @@ class List(ListMember):
         response, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
         result = utils.responseToDict(self.info_query_description, response)
         self.__dict__.update(result)
+        self.owner  = ListMember.create( self.client, self.owner_type, self.owner_name )
+        self.memacl = ListMember.create( self.client, self.memacl_type, self.memacl_name ) if self.memacl_type != 'NONE' else None
     
     def updateParams(self, **updates):
         """Updates a certain parameter in user information."""
@@ -256,7 +346,7 @@ class List(ListMember):
 
         args, = self.client.query( 'get_list_info', (self.name, ), version = 14 )
         args = list(args)[:-3]
-        for field, value in updates.iteritems():
+        for field, value in updates.items():
             args[fields.index(field)] = utils.convertToMoiraValue(value)
 
         self.client.query( 'update_list', [self.name] + args, version = 14 )
@@ -268,6 +358,9 @@ class List(ListMember):
     
     def addMember(self, member, tag = None):
         """Adds a member into the list."""
+
+        if not tag and hasattr(member, 'tag'):
+            tag = member.tab
         
         if tag:
             self.client.query( 'add_tagged_member_to_list', (self.name, member.mtype, member.name, tag), version = 14 )
@@ -348,6 +441,23 @@ class List(ListMember):
 
         self.updateParams(description = new_value)
 
+    def serialize(self):
+        """Stores all list settings inside a dictionary, which may then
+        be stored in JSON or other machine-readable format and reset from it."""
+
+        self.loadInfo()
+        members = self.getExplicitMembers(tags = True)
+        result = {}
+        for field, field_type in self.info_query_description:
+            result[field] = getattr(self, field)
+
+            # datetime is not serialized by JSON and other modules
+            if field_type == datetime.datetime:
+                result[field] = str(result[field])
+
+        result['members'] = [member.toTuple() for member in members]
+        return result
+
 class ListTracer(object):
     """A class which for a given list allows to determine why the certain member is on that list.
     When you initialize it, it does the recursive expansion of the list on the client side,
@@ -363,7 +473,7 @@ class ListTracer(object):
         """Creates the [member -> lists on which it is explicitly on] dictionary."""
         
         result = {}
-        for listname, members in self.lists.iteritems():
+        for listname, members in self.lists.items():
             if not members:
                 continue
 
@@ -373,7 +483,7 @@ class ListTracer(object):
                 result[member].append(listname)
         
         self.inverse = result
-        self.inverseLists = { member.name : contents for member, contents in self.inverse.iteritems() if type(member) == List }
+        self.inverseLists = { member.name : contents for member, contents in self.inverse.items() if type(member) == List }
     
     def trace(self, member):
         """Returns the pathways by which user is included into a list. The pathways

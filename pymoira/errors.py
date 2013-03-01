@@ -4,7 +4,7 @@
 ## This file contains the Moira-related errors.
 #
 
-import constants
+from . import constants
 
 class BaseError(Exception):
     """Any exception thrown by the library is inhereted from this"""
@@ -36,4 +36,9 @@ class MoiraUnavailableError(BaseError):
 class UserError(BaseError):
     """An error related to Moira but not returned from the server."""
     
+    pass
+
+class AuthenticationError(BaseError):
+    """An error related to the authentication process."""
+
     pass
