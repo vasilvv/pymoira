@@ -9,10 +9,10 @@ from . import protocol
 from . import constants
 from . import utils
 import datetime
-from .lists import ListMember
+from .lists import ListMember, Owner
 from .errors import *
 
-class User(ListMember):
+class User(Owner):
     Registerable = 0
     Active = 1
     HalfRegistered = 2

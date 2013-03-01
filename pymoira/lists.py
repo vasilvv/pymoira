@@ -8,9 +8,11 @@
 from . import protocol
 from . import constants
 from . import utils
+from . import stubs
 import datetime
 import re
 from .errors import *
+from .filesys import Filesys
 
 class ListMember(object):
     User = 'USER'
@@ -154,7 +156,66 @@ class ListMember(object):
         
         return None
 
-class List(ListMember):
+# Users and lists are only object capable of owning other objects
+class Owner(ListMember):
+    """This class provides a getOwnedObjects() method which allows to determine which
+    objects are owned by this object."""
+
+    # Currently known ownable objects:
+    # CONTAINER
+    # CONTAINER-MEMACL
+    # FILESYS
+    # LIST
+    # MACHINE
+    # QUERY
+    # QUOTA (alleged by source, was not able to find in real life)
+    # SERVICE (alleged by source)
+    # ZEPHYR
+
+    def getOwnedObjects(self, recursive = False):
+        """Return all the objects owned by this owner."""
+
+        owner_type = ('R' + self.mtype) if recursive else self.mtype
+
+        response = self.client.query( 'get_ace_use', (owner_type, self.name), version = 14 )
+
+        result = []
+        for mtype, name in response:
+            if mtype == 'CONTAINER':
+                m = stubs.Container()
+                m.name = name
+                result.append(m)
+            if mtype == 'CONTAINER_MEMACL':
+                m = stubs.Container()
+                m.name = name
+                result.append(m)
+            if mtype == 'FILESYS':
+                result.append( Filesys(self.client, name) )
+            if mtype == 'LIST':
+                result.append( List(self.client, name) )
+            if mtype == 'MACHINE':
+                from .host import Host
+                result.append( Host(self.client, name, canonicalize = False) )
+            if mtype == 'QUERY':
+                m = stubs.Query()
+                m.name = name
+                result.append(m)
+            if mtype == 'QUOTA':
+                m = stubs.Quota()
+                m.name = name
+                result.append(m)
+            if mtype == 'SERVICE':
+                m = stubs.Service()
+                m.name = name
+                result.append(m)
+            if mtype == 'ZEPHYR':
+                m = stubs.ZephyrClass()
+                m.name = name
+                result.append(m)
+
+        return result
+
+class List(Owner):
     info_query_description = (
         ('name', str),
         ('active', bool),
