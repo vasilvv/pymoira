@@ -20,8 +20,9 @@ class ListMember(object):
     List = 'LIST'
     String = 'STRING'
     Machine = 'MACHINE'
+    No = 'NONE'
     
-    types = (User, Kerberos, List, String, Machine)
+    types = (User, Kerberos, List, String, Machine, No)
     
     def __init__(self, client, mtype, name):
         if mtype not in self.types:
@@ -76,6 +77,7 @@ class ListMember(object):
             'KERBEROS' : 'Kerberos principal',
             'STRING' : 'string/email address',
             'MACHINE' : 'machine',
+            'NONE' : '(none)',
         }
         return "%s %s" % (types[self.mtype], self.name)
     
